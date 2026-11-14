@@ -9,6 +9,22 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: nextpm_test
+          POSTGRES_PASSWORD: nextpm_ci_only_password
+          POSTGRES_DB: the_next_pm_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nextpm_test -d the_next_pm_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://nextpm_test:nextpm_ci_only_password@localhost:5432/the_next_pm_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,6 +32,10 @@ jobs:
           node-version: "22"
       - run: npm install --no-audit --no-fund
       - run: npm run test
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: node scripts/db-smoke.mjs
+      - run: npm run db:seed
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
