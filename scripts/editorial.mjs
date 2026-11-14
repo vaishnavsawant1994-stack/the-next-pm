@@ -37,6 +37,23 @@ async function main(){
     const result=await pool.query("INSERT INTO staff_members(email,display_name,role) VALUES($1,$2,$3) RETURNING id,email,role",[email.toLowerCase(),name,role]);
     console.log(result.rows[0]);return;
   }
+  if(action==="staff:bind"){
+    if(process.env.EDITORIAL_STAFF_BOOTSTRAP!=="true")throw new Error("Staff binding requires EDITORIAL_STAFF_BOOTSTRAP=true in an isolated operator shell");
+    const [staffId,authUserId]=args;
+    if(!staffId||!authUserId)throw new Error("Usage: staff:bind staff_uuid better_auth_user_id");
+    const row=await transaction(async c=>{
+      const member=await one(c,"SELECT * FROM staff_members WHERE id=$1 FOR UPDATE",[staffId]);
+      if(!member.active || member.auth_user_id)throw new Error("Staff record is inactive or already bound");
+      const authUser=await one(c,'SELECT id,email,"emailVerified" AS email_verified FROM "user" WHERE id=$1',[authUserId]);
+      if(!authUser.email_verified || authUser.email.toLowerCase()!==member.email.toLowerCase()) {
+        throw new Error("A verified Better Auth identity with exactly matching email is required");
+      }
+      const updated=await c.query("UPDATE staff_members SET auth_user_id=$2 WHERE id=$1 RETURNING id,email,role,auth_user_id",[staffId,authUserId]);
+      await audit(c,staffId,"staff_auth_identity_bound","staff_members",staffId,{authUserId});
+      return updated.rows[0];
+    });
+    console.log(row);return;
+  }
   if(action==="source:add"){
     const [url,title,publisher,operator]=args;
     if(!url||!title||!publisher||!operator)throw new Error("Usage: source:add official_url title publisher operator_uuid");
@@ -123,7 +140,7 @@ async function main(){
     });
     console.log(r);return;
   }
-  throw new Error("Usage: staff:add | source:add | source:verify | calendar:propose | calendar:review | calendar:publish");
+  throw new Error("Usage: staff:add | staff:bind | source:add | source:verify | calendar:propose | calendar:review | calendar:publish");
 }
 try{await main();}
 catch(e){console.error(e.message);process.exitCode=1;}

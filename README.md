@@ -45,3 +45,10 @@ npm run test
 ```
 
 See [Phase 1 implementation notes](docs/PHASE_1.md). There is no provisioned/live database or web-based editorial login as part of this commit.
+
+
+### Phase 1 private editorial console
+
+The /staff interface supports Better Auth staff sign-in, TOTP MFA, independent editorial review and calendar publishing behind role checks. Public signup is disabled.
+
+Initialize the dedicated database using npm run db:migrate, npm run auth:migrate and npm run db:seed. Refer to docs/PHASE_1.md for account binding. No database/hosting/secrets are provisioned automatically by committing code.

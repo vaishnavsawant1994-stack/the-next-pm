@@ -40,3 +40,32 @@ The publish operation re-checks the verified source, review approval and state, 
 - Production-ready deployment and result-update operations.
 
 **Never expose the operator CLI or enable editorial bootstrap flags on the public website.**
+
+
+## Better Auth staff login and private editorial administration
+
+A private editorial interface now exists at /staff. It uses verified email/password Better Auth sessions, TOTP second-factor enrollment and confirmation, role-based server authorization and a review/publishing queue. The auth API refuses all traffic if DATABASE_URL, BETTER_AUTH_URL and a high-entropy BETTER_AUTH_SECRET are missing.
+
+### Isolated database onboarding
+
+1. Provision an isolated PostgreSQL database for The Next PM, with backups and least-privilege application credentials.
+2. Run npm install, npm run db:migrate, npm run auth:migrate and npm run db:seed.
+3. Generate a unique high-entropy BETTER_AUTH_SECRET (at least 32 characters) and configure BETTER_AUTH_URL to the canonical HTTPS site origin. Never put secrets in Git.
+4. In a trusted terminal, run npx auth@1.6.30 create-admin --email YOUR_VERIFIED_EMAIL --name YOUR_NAME. Enter the password at the interactive prompt, never in chat or process arguments.
+5. In a privileged DB console, look up the new ID using SELECT id,email FROM "user" WHERE email='YOUR_VERIFIED_EMAIL'; . Better Auth creates verified initial admins by default; confirm this.
+6. Temporarily enable EDITORIAL_OPERATOR_ENABLED=true and EDITORIAL_STAFF_BOOTSTRAP=true in an isolated operator environment. Run node scripts/editorial.mjs staff:add EMAIL NAME admin, then node scripts/editorial.mjs staff:bind STAFF_UUID BETTER_AUTH_USER_ID. The bind rejects mismatched or unverified identities. Disable both flags immediately afterward.
+7. Sign in at /staff/sign-in, enroll an authenticator at /staff/2fa, store recovery codes securely, and continue to /staff.
+8. Additional staff accounts require individually provisioned verified Better Auth users with least privilege and explicit binding to the relevant role (operator, reviewer or publisher). Do not make every editor a Better Auth admin.
+
+### Boundaries
+
+- An authenticated user is not an editor unless bound to an active staff_members record whose verified email matches.
+- TOTP must be enabled and a valid Better Auth session must exist before protected staff pages or publishing APIs are used.
+- Each source and election announcement requires separately identifiable proposer, reviewer and publisher.
+- All publishing writes are transactional and add append-only audit records.
+- The UI does not verify the truth of a document merely by being clicked. A real reviewer must inspect the actual original ECI notice and record meaningful evidence notes.
+- The operator CLI remains a privileged manual tool, not a remotely authenticated service.
+
+### Not yet complete
+
+A database is not provisioned, the first real staff account has not been enrolled, actual official notices have not been reviewed, and a production deployment, backups and monitoring have not been configured. A successful migration in CI does not replace a real production acceptance test.

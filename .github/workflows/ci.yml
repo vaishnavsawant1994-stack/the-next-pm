@@ -24,6 +24,8 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: CI-ONLY-NOT-A-REAL-SECRET-NEVER-USE-IN-PRODUCTION-12345
       DATABASE_URL: postgresql://nextpm_test:nextpm_ci_only_password@localhost:5432/the_next_pm_test
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +35,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run test
       - run: npm run db:migrate
+      - run: npm run auth:migrate
       - run: npm run db:seed
       - run: node scripts/db-smoke.mjs
       - run: npm run db:seed
