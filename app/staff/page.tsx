@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { EditorialConsole, type SourceRecord, type ChangeRecord, type RegionRecord } from "@/components/staff/EditorialConsole";
+import { EditorialConsole, type SourceRecord, type ChangeRecord, type RegionRecord, type ImportBatchRecord } from "@/components/staff/EditorialConsole";
 import { getDatabasePool } from "@/lib/server/db";
 import { getStaffForHeaders, StaffAccessError, isAuthConfigured } from "@/lib/server/staff-access";
 
@@ -29,7 +29,7 @@ export default async function StaffDashboard() {
   }
   const db=getDatabasePool();
   if(!db)throw new Error("Database unavailable");
-  const [src,changes,regions]=await Promise.all([
+  const [src,changes,regions,batches]=await Promise.all([
     db.query(
       "SELECT id,title,publisher,source_url,review_status,captured_at::text,review_notes " +
       "FROM source_documents ORDER BY captured_at DESC LIMIT 100"
@@ -39,7 +39,12 @@ export default async function StaffDashboard() {
       "c.submitted_at::text,s.source_url,c.review_notes FROM editorial_changes c " +
       "JOIN source_documents s ON s.id=c.source_id ORDER BY c.submitted_at DESC LIMIT 100"
     ),
-    db.query("SELECT r.slug,r.name,e.status FROM state_regions r JOIN election_cycles e ON e.region_slug=r.slug WHERE e.election_year=2027 ORDER BY r.name")
+    db.query("SELECT r.slug,r.name,e.status FROM state_regions r JOIN election_cycles e ON e.region_slug=r.slug WHERE e.election_year=2027 ORDER BY r.name"),
+    db.query(
+      "SELECT b.id,b.region_slug,b.status,b.row_count,b.submitted_at::text,s.source_url,b.review_notes " +
+      "FROM constituency_import_batches b JOIN source_documents s ON s.id=b.source_id " +
+      "ORDER BY b.submitted_at DESC LIMIT 100"
+    )
   ]);
   return <div className="container page-shell">
     <EditorialConsole
@@ -48,6 +53,7 @@ export default async function StaffDashboard() {
       sources={src.rows as SourceRecord[]}
       changes={changes.rows as ChangeRecord[]}
       regions={regions.rows as RegionRecord[]}
+      batches={batches.rows as ImportBatchRecord[]}
     />
   </div>;
 }

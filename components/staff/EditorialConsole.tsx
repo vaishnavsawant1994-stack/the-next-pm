@@ -15,14 +15,20 @@ export type ChangeRecord = {
   source_url: string; review_notes: string | null;
 };
 export type RegionRecord = { slug: string; name: string; status: string };
+export type ImportBatchRecord = {
+  id: string; region_slug: string; status: string; row_count: number;
+  submitted_at: string; source_url: string; review_notes: string | null;
+};
+
 
 export function EditorialConsole({
-  name, role, sources, changes, regions,
+  name, role, sources, changes, regions, batches,
 }: {
   name: string; role: StaffRole;
   sources: SourceRecord[];
   changes: ChangeRecord[];
   regions: RegionRecord[];
+  batches: ImportBatchRecord[];
 }) {
   const router = useRouter();
   const [working, setWorking] = useState(false);
@@ -62,6 +68,18 @@ export function EditorialConsole({
     void perform(payload).then(() => {
       if (action === "source:add" || action === "calendar:propose") form.reset();
     });
+  }
+
+
+  async function submitCsv(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form=event.currentTarget;
+    const data=new FormData(form);
+    const file=data.get("file");
+    if (!(file instanceof File)) {setFeedback("Choose a UTF-8 CSV file first");return;}
+    if(file.size>90_000) {setFeedback("CSV exceeds the 90 KB upload limit");return;}
+    const csv=await file.text();
+    await perform({action:"constituency:submit",csv,sourceId:String(data.get("sourceId")||"")});
   }
 
   function sendAction(action: string, id: string) {
@@ -160,6 +178,48 @@ export function EditorialConsole({
           {canPublish && change.status==="approved" &&
             <button type="button" className="button button-primary" disabled={working}
               onClick={()=>sendAction("calendar:publish",change.id)}>Publish approved announcement</button>}
+        </article>)}
+      </div>
+    </section>
+
+    <section className="staff-section">
+      <h2>3. Constituency import batches</h2>
+      <p>Import a single state per CSV with these exact columns: state_slug, seat_number, seat_name, boundary_version. All records remain private drafts until approved by a different reviewer and published by a third staff member.</p>
+      {canPropose && <form className="staff-form staff-form-wide" onSubmit={submitCsv}>
+        <label htmlFor="constituency-csv">UTF-8 constituency CSV</label>
+        <input id="constituency-csv" name="file" type="file" accept=".csv,text/csv" required />
+        <label htmlFor="constituency-source">Independently verified ECI source document</label>
+        <select id="constituency-source" name="sourceId" required defaultValue="">
+          <option value="" disabled>Choose verified source</option>
+          {sources.filter(s=>s.review_status==="verified").map(s=><option key={s.id} value={s.id}>{s.title} · {s.id.slice(0,8)}</option>)}
+        </select>
+        <button type="submit" className="button button-primary" disabled={working}>Submit private draft batch</button>
+      </form>}
+      <div className="staff-data-list">
+        {batches.length===0 && <p>No constituency batches have been imported yet.</p>}
+        {batches.map(batch=><article className="staff-list-item" key={batch.id}>
+          <div>
+            <span className="status-chip">{batch.status}</span>
+            <h3>{batch.region_slug} · {batch.row_count} constituency records</h3>
+            <p>Submitted {batch.submitted_at}</p>
+            <a href={batch.source_url} target="_blank" rel="noopener noreferrer">Open supporting source ↗</a>
+            {batch.review_notes && <p>Review: {batch.review_notes}</p>}
+          </div>
+          {canReview && batch.status==="pending" && <form className="staff-form" onSubmit={e=>submit(e,"constituency:review")}>
+            <input type="hidden" name="id" value={batch.id}/>
+            <label htmlFor={"batch-decision-"+batch.id}>Batch review</label>
+            <select id={"batch-decision-"+batch.id} name="decision" required>
+              <option value="approved">Approve after reviewing original source and records</option>
+              <option value="rejected">Reject and discard unpublished drafts</option>
+            </select>
+            <label htmlFor={"batch-notes-"+batch.id}>Review evidence (at least 20 characters)</label>
+            <textarea id={"batch-notes-"+batch.id} name="notes" minLength={20} maxLength={1000} required rows={3}/>
+            <button type="submit" className="button button-outline" disabled={working}>Record batch review</button>
+          </form>}
+          {canPublish && batch.status==="approved" && <button type="button" disabled={working}
+            className="button button-primary" onClick={()=>sendAction("constituency:publish",batch.id)}>
+              Publish reviewed constituency records
+            </button>}
         </article>)}
       </div>
     </section>
