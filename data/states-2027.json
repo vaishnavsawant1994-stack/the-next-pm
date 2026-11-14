@@ -1,0 +1,58 @@
+[
+  {
+    "slug": "goa",
+    "name": "Goa",
+    "seats": 40,
+    "wave": "early-2027",
+    "status": "expected",
+    "pollDate": null
+  },
+  {
+    "slug": "manipur",
+    "name": "Manipur",
+    "seats": 60,
+    "wave": "early-2027",
+    "status": "expected",
+    "pollDate": null
+  },
+  {
+    "slug": "punjab",
+    "name": "Punjab",
+    "seats": 117,
+    "wave": "early-2027",
+    "status": "expected",
+    "pollDate": null
+  },
+  {
+    "slug": "uttarakhand",
+    "name": "Uttarakhand",
+    "seats": 70,
+    "wave": "early-2027",
+    "status": "expected",
+    "pollDate": null
+  },
+  {
+    "slug": "uttar-pradesh",
+    "name": "Uttar Pradesh",
+    "seats": 403,
+    "wave": "early-2027",
+    "status": "expected",
+    "pollDate": null
+  },
+  {
+    "slug": "gujarat",
+    "name": "Gujarat",
+    "seats": 182,
+    "wave": "late-2027",
+    "status": "expected",
+    "pollDate": null
+  },
+  {
+    "slug": "himachal-pradesh",
+    "name": "Himachal Pradesh",
+    "seats": 68,
+    "wave": "late-2027",
+    "status": "expected",
+    "pollDate": null
+  }
+]
