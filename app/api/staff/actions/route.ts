@@ -7,6 +7,9 @@ import {
   requireIndependentReviewer, assertPublishableAnnouncement,
 } from "@/lib/editorial/policy.mjs";
 import type { PoolClient } from "pg";
+import { createHash } from "node:crypto";
+import { validateConstituencyCsv } from "@/lib/import/constituencies.mjs";
+import { states2027 } from "@/lib/elections";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -134,6 +137,83 @@ async function execute(client: PoolClient, staff: StaffIdentity, body: Input) {
     return {id:requestId,status:"published"};
   }
 
+
+  if (action === "constituency:submit") {
+    requireStaffRole(staff,["operator","admin"]);
+    const csv = str(body,"csv",90000);
+    const sourceId = id(body,"sourceId");
+    const capacities = Object.fromEntries(states2027.map(s=>[s.slug,s.seats]));
+    const parsed = validateConstituencyCsv(csv,capacities);
+    const region = parsed.regionSlug;
+    const state = await getRow(client,"SELECT * FROM state_regions WHERE slug=$1 FOR UPDATE",[region]);
+    if (parsed.rows.some(s=>s.number>state.assembly_seat_count)) throw new Error("Seat number exceeds current verified state capacity");
+    const source = await getRow(client,"SELECT * FROM source_documents WHERE id=$1 FOR SHARE",[sourceId]);
+    if (source.review_status !== "verified") throw new Error("Verified source required");
+    assertOfficialEciUrl(source.source_url);
+    const hash = createHash("sha256").update(csv).digest("hex");
+    const newBatch = await client.query(
+      "INSERT INTO constituency_import_batches(region_slug,source_id,original_file_sha256,row_count,submitted_by) VALUES($1,$2,$3,$4,$5) RETURNING id",
+      [region,sourceId,hash,parsed.rows.length,staff.id]
+    );
+    const batchId = newBatch.rows[0].id as string;
+    for (const seat of parsed.rows) {
+      await client.query(
+        "INSERT INTO constituencies(region_slug,chamber,official_number,official_name,boundary_version,source_id,publication_status,import_batch_id) VALUES($1,'assembly',$2,$3,$4,$5,'draft',$6)",
+        [region,seat.number,seat.name,seat.boundaryVersion,sourceId,batchId]
+      );
+    }
+    await audit(client,staff.id,"constituency_batch_proposed","constituency_import_batches",batchId,{region,rowCount:parsed.rows.length,sha256:hash});
+    return {id:batchId,status:"pending",rowCount:parsed.rows.length};
+  }
+
+  if (action === "constituency:review") {
+    requireStaffRole(staff,["reviewer","admin"]);
+    const batchId = id(body,"id");
+    const decision = str(body,"decision",10);
+    const notes = str(body,"notes",1000);
+    if (!["approved","rejected"].includes(decision) || notes.length<20) {
+      throw new Error("A review decision and explanation of at least 20 characters are required");
+    }
+    const batch = await getRow(client,"SELECT * FROM constituency_import_batches WHERE id=$1 FOR UPDATE",[batchId]);
+    if (batch.status !== "pending") throw new Error("Only pending batches may be reviewed");
+    requireIndependentReviewer(batch.submitted_by,staff.id);
+    const source = await getRow(client,"SELECT * FROM source_documents WHERE id=$1 FOR SHARE",[batch.source_id]);
+    if (source.review_status !== "verified") throw new Error("Source must remain verified");
+    assertOfficialEciUrl(source.source_url);
+    const count = await client.query("SELECT count(*)::int AS total FROM constituencies WHERE import_batch_id=$1 AND publication_status='draft'",[batchId]);
+    if (count.rows[0].total !== batch.row_count) throw new Error("Draft row count differs from submitted batch");
+    await client.query(
+      "UPDATE constituency_import_batches SET status=$2,reviewed_by=$3,reviewed_at=now(),review_notes=$4 WHERE id=$1",
+      [batchId,decision,staff.id,notes]
+    );
+    if (decision === "rejected") await client.query("DELETE FROM constituencies WHERE import_batch_id=$1 AND publication_status='draft'",[batchId]);
+    await audit(client,staff.id,"constituency_batch_reviewed","constituency_import_batches",batchId,{decision,notes});
+    return {id:batchId,status:decision};
+  }
+
+  if (action === "constituency:publish") {
+    requireStaffRole(staff,["publisher","admin"]);
+    const batchId = id(body,"id");
+    const batch = await getRow(client,"SELECT * FROM constituency_import_batches WHERE id=$1 FOR UPDATE",[batchId]);
+    if (batch.status !== "approved") throw new Error("Only approved batches may be published");
+    requireIndependentReviewer(batch.submitted_by,staff.id);
+    requireIndependentReviewer(batch.reviewed_by,staff.id);
+    const source = await getRow(client,"SELECT * FROM source_documents WHERE id=$1 FOR SHARE",[batch.source_id]);
+    if (source.review_status !== "verified") throw new Error("Source must remain verified");
+    assertOfficialEciUrl(source.source_url);
+    const updated = await client.query(
+      "UPDATE constituencies SET publication_status='published' WHERE import_batch_id=$1 AND publication_status='draft' RETURNING id",
+      [batchId]
+    );
+    if (updated.rowCount !== batch.row_count) throw new Error("Draft batch does not match reviewed row count");
+    await client.query(
+      "UPDATE constituency_import_batches SET status='published',published_by=$2,published_at=now() WHERE id=$1",
+      [batchId,staff.id]
+    );
+    await audit(client,staff.id,"constituency_batch_published","constituency_import_batches",batchId,{rowCount:updated.rowCount,sourceId:batch.source_id});
+    return {id:batchId,status:"published",rowCount:updated.rowCount};
+  }
+
   throw new Error("Unsupported action");
 }
 
@@ -143,13 +223,13 @@ export async function POST(request: Request) {
     return Response.json({error:"Invalid request origin"},{status:403,headers:{"Cache-Control":"no-store"}});
   }
   const length = Number(request.headers.get("content-length") || "0");
-  if (length > 12_000 || !request.headers.get("content-type")?.startsWith("application/json")) {
+  if (length > 100_000 || !request.headers.get("content-type")?.startsWith("application/json")) {
     return Response.json({error:"Invalid request payload"},{status:400});
   }
   let payload: Input;
   try {
     const text = await request.text();
-    if (text.length > 12_000) throw new Error("Payload too large");
+    if (text.length > 100_000) throw new Error("Payload too large");
     const parsed: unknown = JSON.parse(text);
     if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error("Payload must be an object");
     payload = parsed as Input;
