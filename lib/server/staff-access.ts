@@ -26,6 +26,9 @@ export async function getStaffForHeaders(
   if (!isAuthConfigured()) throw new StaffAccessError(503, "Staff authentication is not configured");
   const session = await auth.api.getSession({ headers: incoming });
   if (!session?.user) throw new StaffAccessError(401, "Sign in required");
+  if (session.session && "impersonatedBy" in session.session && session.session.impersonatedBy) {
+    throw new StaffAccessError(403, "Impersonated sessions cannot access editorial controls");
+  }
   if (!session.user.emailVerified) throw new StaffAccessError(403, "Verified staff email required");
   const pool = getDatabasePool();
   if (!pool) throw new StaffAccessError(503, "Database unavailable");

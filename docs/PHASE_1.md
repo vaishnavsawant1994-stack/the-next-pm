@@ -69,3 +69,25 @@ A private editorial interface now exists at /staff. It uses verified email/passw
 ### Not yet complete
 
 A database is not provisioned, the first real staff account has not been enrolled, actual official notices have not been reviewed, and a production deployment, backups and monitoring have not been configured. A successful migration in CI does not replace a real production acceptance test.
+
+
+## Verified constituency batch imports
+
+The public /constituencies directory is read-only and publishes only independently approved records whose source remains verified. Draft or rejected rows are never shown.
+
+The private /staff dashboard includes CSV upload, batch review and publication, and a published-record count. All changes are role-gated, independent, auditable and transactional. A trusted operator CLI is also available:
+
+1. node scripts/constituencies.mjs validate PATH_TO_CSV
+2. node scripts/constituencies.mjs submit PATH_TO_CSV VERIFIED_SOURCE_UUID OPERATOR_UUID
+3. node scripts/constituencies.mjs review BATCH_UUID REVIEWER_UUID approved REVIEW_NOTES
+4. node scripts/constituencies.mjs publish BATCH_UUID PUBLISHER_UUID
+
+For submit/review/publish, a dedicated DATABASE_URL and EDITORIAL_OPERATOR_ENABLED=true are required. Trusted operator UUIDs are not authentication and should be used only in a controlled shell. The browser workflow uses real Better Auth sessions instead.
+
+CSV header must be exactly:
+
+state_slug,seat_number,seat_name,boundary_version
+
+Every CSV contains only one state. Seat numbers must be within that state's authorized Assembly capacity; duplicates, malformed quotes, unknown states and empty names are rejected. The system does not generate fictional records to meet coverage targets. Source ownership/reuse permission must be independently reviewed before importing documents.
+
+There is **no claim of 690 verified seat records** until lawful originals have been obtained, checked and approved. Sample datasets in tests are synthetic and never published to a real environment.

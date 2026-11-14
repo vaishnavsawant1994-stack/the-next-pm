@@ -27,7 +27,7 @@ export default async function HomePage() {
             <div className="panel-year">2027<span className="panel-year-caption">State Assembly Elections</span></div>
             <div className="panel-divider" />
             <div className="panel-stats">
-              <div><strong>07</strong><span>Expected state cycles</span></div>
+              <div><strong>{String(states2027.length).padStart(2,"0")}</strong><span>Expected state cycles</span></div>
               <div><strong>{seatTotal2027}</strong><span>Assembly constituencies</span></div>
             </div>
             <div className="panel-divider" />

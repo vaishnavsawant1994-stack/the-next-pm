@@ -29,7 +29,7 @@ export default async function StaffDashboard() {
   }
   const db=getDatabasePool();
   if(!db)throw new Error("Database unavailable");
-  const [src,changes,regions,batches]=await Promise.all([
+  const [src,changes,regions,batches,coverage]=await Promise.all([
     db.query(
       "SELECT id,title,publisher,source_url,review_status,captured_at::text,review_notes " +
       "FROM source_documents ORDER BY captured_at DESC LIMIT 100"
@@ -44,6 +44,10 @@ export default async function StaffDashboard() {
       "SELECT b.id,b.region_slug,b.status,b.row_count,b.submitted_at::text,s.source_url,b.review_notes " +
       "FROM constituency_import_batches b JOIN source_documents s ON s.id=b.source_id " +
       "ORDER BY b.submitted_at DESC LIMIT 100"
+    ),
+    db.query(
+      "SELECT count(*)::int AS total FROM constituencies c JOIN source_documents s ON s.id=c.source_id " +
+      "WHERE c.publication_status=\u0027published\u0027 AND s.review_status=\u0027verified\u0027"
     )
   ]);
   return <div className="container page-shell">
@@ -54,6 +58,7 @@ export default async function StaffDashboard() {
       changes={changes.rows as ChangeRecord[]}
       regions={regions.rows as RegionRecord[]}
       batches={batches.rows as ImportBatchRecord[]}
+      publishedSeatCount={coverage.rows[0]?.total || 0}
     />
   </div>;
 }

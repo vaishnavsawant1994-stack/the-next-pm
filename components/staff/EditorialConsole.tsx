@@ -22,13 +22,14 @@ export type ImportBatchRecord = {
 
 
 export function EditorialConsole({
-  name, role, sources, changes, regions, batches,
+  name, role, sources, changes, regions, batches, publishedSeatCount,
 }: {
   name: string; role: StaffRole;
   sources: SourceRecord[];
   changes: ChangeRecord[];
   regions: RegionRecord[];
   batches: ImportBatchRecord[];
+  publishedSeatCount: number;
 }) {
   const router = useRouter();
   const [working, setWorking] = useState(false);
@@ -101,6 +102,7 @@ export function EditorialConsole({
       <article><strong>{sources.length}</strong><span>Recent source records</span></article>
       <article><strong>{sources.filter(s=>s.review_status==="pending").length}</strong><span>Sources requiring review</span></article>
       <article><strong>{changes.filter(c=>c.status==="pending").length}</strong><span>Calendar proposals for review</span></article>
+      <article><strong>{publishedSeatCount}</strong><span>Approved public constituency records</span></article>
     </div>
 
     <section className="staff-section">

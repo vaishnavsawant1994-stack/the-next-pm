@@ -52,3 +52,8 @@ See [Phase 1 implementation notes](docs/PHASE_1.md). There is no provisioned/liv
 The /staff interface supports Better Auth staff sign-in, TOTP MFA, independent editorial review and calendar publishing behind role checks. Public signup is disabled.
 
 Initialize the dedicated database using npm run db:migrate, npm run auth:migrate and npm run db:seed. Refer to docs/PHASE_1.md for account binding. No database/hosting/secrets are provisioned automatically by committing code.
+
+
+### Constituency imports
+
+Visit /constituencies for approved public records. Staff can upload/approve a source-backed CSV in /staff or use the controlled scripts/constituencies.mjs pipeline; draft records are never public. See docs/PHASE_1.md. No candidate or result information is fabricated or auto-published.

@@ -28,7 +28,8 @@ export default async function StateDetailPage({ params }: { params: Promise<{ sl
         <article className="info-panel"><span className="panel-kicker">OFFICIAL POLLING DATE</span><h2>{state.status === "announced" && state.pollDate && state.announcementSourceUrl ? state.pollDate : "Not verified here"}</h2><p>{state.status === "announced" && state.announcementSourceUrl ? <a href={state.announcementSourceUrl} target="_blank" rel="noopener noreferrer">View original official announcement ↗</a> : "Refer to official Election Commission notices once released."}</p></article>
         <article className="info-panel"><span className="panel-kicker">CANDIDATE RECORDS</span><h2>Awaiting sourced records</h2><p>Only officially documented nominations will be added, with dates and source links.</p></article>
       </div>
-      <div className="notice detail-notice">This starter contains state-level planning data only. It does not yet contain a verified seat-by-seat candidate directory, official polling schedule, or results feed.</div>
+      <div className="notice detail-notice">Constituency records appear only after verified-source imports receive independent approval. Candidate nominations and results are separate future data workflows.</div>
+      <p><Link className="button button-outline" href={"/constituencies?state="+state.slug}>Explore approved constituency records →</Link></p>
       <h2>Authoritative references</h2>
       <ul className="resource-list">
         <li><a href="https://www.eci.gov.in/term-of-the-houses/" target="_blank" rel="noopener noreferrer">ECI — Terms of the Houses ↗</a></li>
