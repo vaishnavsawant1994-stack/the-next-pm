@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { ElectionCard } from "@/components/ElectionCard";
-import { seatTotal2027, states2027 } from "@/lib/elections";
+import { load2027StateCatalog } from "@/lib/server/states";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const { states: states2027 } = await load2027StateCatalog();
+  const seatTotal2027 = states2027.reduce((sum,state) => sum + state.seats,0);
   return (
     <>
       <section className="hero">

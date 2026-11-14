@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { ElectionCard } from "@/components/ElectionCard";
-import { states2027 } from "@/lib/elections";
+import { load2027StateCatalog } from "@/lib/server/states";
 
 export const metadata: Metadata = { title: "States — 2027 Elections" };
 
-export default function StatesPage() {
+export const dynamic = "force-dynamic";
+
+export default async function StatesPage() {
+  const { states: states2027 } = await load2027StateCatalog();
   return (
     <div className="container page-shell">
       <span className="section-kicker">2027 / STATE DIRECTORY</span>

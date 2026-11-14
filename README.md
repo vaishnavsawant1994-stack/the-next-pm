@@ -30,3 +30,18 @@ npm run dev
 Open `http://localhost:3000`. Run `npm run lint`, `npm run typecheck`, and `npm run build` before release.
 
 **Data integrity:** Planning dates are not polling dates. Always check official Election Commission notices before publishing confirmed election schedules or final results.
+
+## Phase 1 database groundwork
+
+PostgreSQL schema, migration and seed scripts, reviewed announcement workflow and a protected **operator-only CLI** are available. Public election/state pages read the PostgreSQL catalog when `DATABASE_URL` is configured; without it, a planning-only fixture remains available. The operator CLI is NOT a staff login or public administrative interface.
+
+```bash
+npm install
+# Set DATABASE_URL through an isolated backend environment / secret store
+npm run db:migrate
+npm run db:seed
+npm run db:status
+npm run test
+```
+
+See [Phase 1 implementation notes](docs/PHASE_1.md). There is no provisioned/live database or web-based editorial login as part of this commit.

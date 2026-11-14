@@ -5,8 +5,9 @@ export type ElectionState = {
   name: string;
   seats: number;
   wave: string;
-  status: "expected";
-  pollDate: null;
+  status: "expected" | "announced" | "completed" | "cancelled";
+  pollDate: string | null;
+  announcementSourceUrl?: string | null;
 };
 
 // Planning data is not an official ECI poll notification. Treat official updates separately.
