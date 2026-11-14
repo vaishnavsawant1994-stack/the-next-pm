@@ -4,6 +4,7 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/elections", label: "Elections" },
   { href: "/states", label: "States" },
+  { href: "/constituencies", label: "Constituencies" },
   { href: "/voter-guide", label: "Voter guide" },
   { href: "/sources", label: "Sources" },
   { href: "/about", label: "About" },
