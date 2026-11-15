@@ -57,3 +57,7 @@ Initialize the dedicated database using npm run db:migrate, npm run auth:migrate
 ### Constituency imports
 
 Visit /constituencies for approved public records. Staff can upload/approve a source-backed CSV in /staff or use the controlled scripts/constituencies.mjs pipeline; draft records are never public. See docs/PHASE_1.md. No candidate or result information is fabricated or auto-published.
+
+## Detailed project documentation
+
+See the [**Project Handbook**](docs/PROJECT_HANDBOOK.md) for this repository's intended users, actual source scope, features, architecture, local setup, known limitations, security constraints, qualification requirements and prioritized future work. Source documentation is not proof of live production completeness.
